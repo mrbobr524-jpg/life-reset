@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>System Life Reset</title>
+  <!-- Telegram Web App SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #070b19;
+      --card-bg: rgba(13, 22, 48, 0.85);
+      --primary: #00f0ff;
+      --primary-glow: rgba(0, 240, 255, 0.4);
+      --secondary: #7000ff;
+      --accent: #ff0055;
+      --text: #e2f1ff;
+      --muted: #5d7599;
+      --success: #00ff66;
+      --warning: #ffaa00;
+      --font-title: 'Orbitron', sans-serif;
+      --font-body: 'Rajdhani', sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 17px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      background-image: 
+        radial-gradient(circle at 50% 0%, var(--primary-glow), transparent 60%),
+        linear-gradient(to bottom, rgba(7,11,25,0.8), var(--bg));
+      background-attachment: fixed;
+    }
+
+    .onboarding-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(4, 7, 18, 0.95);
+      backdrop-filter: blur(12px);
+      z-index: 1000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .onboard-card {
+      background: var(--card-bg);
+      border: 2px solid var(--primary);
+      box-shadow: 0 0 30px var(--primary-glow);
+      border-radius: 16px;
+      padding: 24px;
+      width: 100%;
+      max-width: 480px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .step { display: none; }
+    .step.active { display: block; }
+
+    h1, h2, h3 { font-family: var(--font-title); text-transform: uppercase; letter-spacing: 1px; }
+    .title-glow { color: var(--primary); text-shadow: 0 0 10px var(--primary-glow); }
+
+    .input-group { margin-bottom: 18px; }
+    .input-group label { display: block; margin-bottom: 8px; font-weight: 600; color: var(--primary); }
+    .grid-selector { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 15px; }
+    .select-btn {
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--muted);
+      border-radius: 8px;
+      color: var(--text);
+      cursor: pointer;
+      text-align: center;
+      font-family: var(--font-body);
+      font-weight: 600;
+      transition: 0.2s;
+    }
+    .select-btn.selected {
+      border-color: var(--primary);
+      background: rgba(0, 240, 255, 0.15);
+      box-shadow: 0 0 10px var(--primary-glow);
+      color: var(--primary);
+    }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-family: var(--font-title);
+      font-weight: 800;
+      font-size: 16px;
+      cursor: pointer;
+      text-transform: uppercase;
+      box-shadow: 0 0 15px var(--primary-glow);
+      margin-top: 10px;
+    }
+    .btn:active { transform: scale(0.98); }
+
+    header {
+      padding: 16px 20px;
+      background: rgba(7, 11, 25, 0.9);
+      border-bottom: 1px solid rgba(0, 240, 255, 0.2);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .user-badge { display: flex; align-items: center; gap: 12px; }
+    .avatar {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: var(--secondary);
+      border: 2px solid var(--primary);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 900; color: #fff;
+    }
+
+    main { flex: 1; padding: 20px; max-width: 600px; margin: 0 auto; width: 100%; padding-bottom: 90px; }
+    .view { display: none; }
+    .view.active { display: block; }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid rgba(0, 240, 255, 0.2);
+      border-radius: 12px;
+      padding: 18px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+
+    .bar-container { margin: 8px 0 14px 0; }
+    .bar-label { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 4px; }
+    .bar-bg { height: 10px; background: rgba(255,255,255,0.1); border-radius: 5px; overflow: hidden; }
+    .bar-fill { height: 100%; background: var(--primary); width: 0%; transition: width 0.3s ease; }
+
+    nav {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: rgba(7, 11, 25, 0.95);
+      border-top: 1px solid rgba(0, 240, 255, 0.2);
+      display: flex; justify-content: space-around;
+      padding: 10px 0; z-index: 100;
+      backdrop-filter: blur(10px);
+    }
+    .nav-item {
+      display: flex; flex-direction: column; align-items: center;
+      color: var(--muted); background: none; border: none; font-family: var(--font-body);
+      font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    .nav-item.active { color: var(--primary); text-shadow: 0 0 8px var(--primary-glow); }
+    .nav-icon { font-size: 20px; margin-bottom: 2px; }
+
+    .quest-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px; background: rgba(255,255,255,0.03);
+      border-radius: 8px; margin-bottom: 8px; border: 1px solid rgba(255,255,255,0.05);
+    }
+    .quest-item.done { border-color: var(--success); opacity: 0.6; }
+    .quest-check {
+      width: 24px; height: 24px; border: 2px solid var(--primary); border-radius: 6px;
+      display: flex; align-items: center; justify-content: center; cursor: pointer;
+    }
+    .quest-item.done .quest-check { background: var(--success); border-color: var(--success); color: #000; }
+    
+    .quest-title-link {
+      color: var(--text);
+      cursor: pointer;
+      text-decoration: underline dotted var(--primary);
+    }
+    .quest-title-link:hover { color: var(--primary); }
+
+    .popup-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.8); z-index: 2000; display: none;
+      justify-content: center; align-items: center; padding: 20px;
+    }
+    .popup-box {
+      background: var(--card-bg); border: 1px solid var(--primary);
+      border-radius: 12px; padding: 20px; max-width: 400px; width: 100%;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ONBOARDING MODAL -->
+  <div id="onboarding" class="onboarding-overlay" style="display: none;">
+    <div class="onboard-card">
+      <div class="step active" id="step-1">
+        <h2 class="title-glow" style="margin-bottom: 15px;">СИСТЕМА: ИНИЦИАЛИЗАЦИЯ</h2>
+        <div class="input-group">
+          <label>ГЛАВНАЯ ЦЕЛЬ</label>
+          <div class="grid-selector">
+            <div class="select-btn selected" onclick="selectOpt(this, 'goal', 'Набор массы')">Набор массы (Сила)</div>
+            <div class="select-btn" onclick="selectOpt(this, 'goal', 'Сброс веса')">Сброс веса (Жиросжигание)</div>
+            <div class="select-btn" onclick="selectOpt(this, 'goal', 'Выносливость')">Выносливость и рельеф</div>
+          </div>
+        </div>
+        <button class="btn" onclick="nextStep(2)">Далее ➔</button>
+      </div>
+
+      <div class="step" id="step-2">
+        <h2 class="title-glow" style="margin-bottom: 15px;">ИНВЕНТАРЬ</h2>
+        <div class="grid-selector">
+          <div class="select-btn selected" onclick="selectOpt(this, 'equip', 'Свой вес')">🏋️ Свой вес (без инвентаря)</div>
+          <div class="select-btn" onclick="selectOpt(this, 'equip', 'Гантели')">🧱 Дома с гантелями</div>
+          <div class="select-btn" onclick="selectOpt(this, 'equip', 'Турник')">🪜 Турник и брусья</div>
+        </div>
+        <button class="btn" onclick="finishOnboarding()">АКТИВИРОВАТЬ СИСТЕМУ 🚀</button>
+      </div>
+    </div>
+  </div>
+
+  <header>
+    <div class="user-badge">
+      <div class="avatar" id="app-avatar">E</div>
+      <div>
+        <div id="app-username" style="font-weight: 700;">Охотник</div>
+        <div style="font-size: 13px; color: var(--primary);" id="app-rank">E-RANK</div>
+      </div>
+    </div>
+    <div style="text-align: right;">
+      <div style="font-family: var(--font-title); color: var(--warning);" id="app-gold">🪙 0</div>
+      <div style="font-size: 12px; color: var(--muted);" id="app-lvl">LVL 1</div>
+    </div>
+  </header>
+
+  <main>
+    <div id="view-quests" class="view active">
+      <div class="card">
+        <h3 class="title-glow" style="margin-bottom: 5px;" id="day-title">КВЕСТ НА СЕГОДНЯ</h3>
+        <p style="font-size: 13px; color: var(--muted); margin-bottom: 12px;">Адаптировано под Telegram-охотника.</p>
+        <div class="bar-container">
+          <div class="bar-label"><span>Прогресс дня</span><span id="quest-prog-text">0/3</span></div>
+          <div class="bar-bg"><div class="bar-fill" id="quest-prog-bar"></div></div>
+        </div>
+        <div id="daily-checklist"></div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-bottom: 10px;">💧 ЗОЖ ПРИВЫЧКИ</h3>
+        <div class="quest-item">
+          <div>Водный баланс (2L)</div>
+          <div class="quest-check" onclick="toggleHabit(this)">✓</div>
+        </div>
+        <div class="quest-item">
+          <div>Здоровый сон (7-8 ч)</div>
+          <div class="quest-check" onclick="toggleHabit(this)">✓</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="view-status" class="view">
+      <div class="card">
+        <h3 class="title-glow">ХАРАКТЕРИСТИКИ</h3>
+        <div style="margin-top: 15px;">
+          <p>Свободные очки: <b id="stat-points" style="color: var(--primary);">0</b></p>
+          <div style="margin-top: 10px; display: grid; gap: 8px;">
+            <div class="quest-item"><span>Сила (STR): <b id="str-val">10</b></span><button style="padding:4px 8px;" onclick="addStat('str')">+</button></div>
+            <div class="quest-item"><span>Живучесть (VIT): <b id="vit-val">10</b></span><button style="padding:4px 8px;" onclick="addStat('vit')">+</button></div>
+            <div class="quest-item"><span>Ловкость (AGI): <b id="agi-val">10</b></span><button style="padding:4px 8px;" onclick="addStat('agi')">+</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="view-shop" class="view">
+      <div class="card">
+        <h3 class="title-glow">ЛАВКА</h3>
+        <div class="quest-item">
+          <div>🧪 Зелье Отдыха</div>
+          <button class="btn" style="width: auto; padding: 6px 12px;" onclick="buyItem(50)">50 🪙</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="view-guild" class="view">
+      <div class="card">
+        <h3 class="title-glow">ГИЛЬДИЯ ТГ</h3>
+        <p style="font-size: 14px; margin-top: 5px;">Статус: <b style="color: var(--success);">Подключено к Telegram</b></p>
+      </div>
+    </div>
+
+    <div id="view-settings" class="view">
+      <div class="card">
+        <h3 class="title-glow">НАСТРОЙКИ</h3>
+        <button class="btn" style="background: var(--accent); margin-top: 10px;" onclick="resetAll()">⚠️ Сбросить прогресс</button>
+      </div>
+    </div>
+  </main>
+
+  <nav>
+    <button class="nav-item active" onclick="switchTab('quests', this)"><span class="nav-icon">⚔️</span>Квесты</button>
+    <button class="nav-item" onclick="switchTab('status', this)"><span class="nav-icon">📊</span>Статус</button>
+    <button class="nav-item" onclick="switchTab('shop', this)"><span class="nav-icon">🛒</span>Лавка</button>
+    <button class="nav-item" onclick="switchTab('guild', this)"><span class="nav-icon">🏆</span>Гильдия</button>
+    <button class="nav-item" onclick="switchTab('settings', this)"><span class="nav-icon">⚙️</span>Опции</button>
+  </nav>
+
+  <!-- Модальное окно техники -->
+  <div id="popup" class="popup-overlay" onclick="closePopup()">
+    <div class="popup-box" onclick="event.stopPropagation()">
+      <h3 id="popup-title" class="title-glow" style="margin-bottom: 10px;">Техника</h3>
+      <p id="popup-body" style="line-height: 1.5; color: var(--text);"></p>
+      <button class="btn" style="margin-top: 15px;" onclick="closePopup()">Понятно</button>
+    </div>
+  </div>
+
+  <script>
+    // Инициализация Telegram WebApp API
+    const tg = window.Telegram.WebApp;
+    tg.expand(); // Разворачиваем на весь экран в Телеграме
+
+    let state = {
+      name: '', goal: 'Набор массы', equip: 'Свой вес',
+      lvl: 1, exp: 0, gold: 0, points: 0, str: 10, vit: 10, agi: 10,
+      lastDayIndex: -1, lastDate: ''
+    };
+
+    const tempSelections = { goal: 'Набор массы', equip: 'Свой вес' };
+
+    const workoutPool = {
+      'Свой вес': [
+        { group: "День: Грудь & Кор", items: ["Отжимания (3х15)", "Широкие отжимания (3х12)", "Планка (1 мин)"] },
+        { group: "День: Спина & Осанка", items: ["Обратная гиперэкстензия (3х15)", "Плиометрические отжимания (3х10)", "Лодочка (3х15)"] },
+        { group: "День: Ноги & Выносливость", items: ["Классические приседания (3х25)", "Выпады назад (3х14)", "Скручивания на пресс (3х20)"] }
+      ],
+      'Гантели': [
+        { group: "День: Грудь & Руки", items: ["Жим гантелей лежа (3х12)", "Разводка гантелей (3х12)", "Прессы на бицепс (3х12)"] },
+        { group: "День: Спина & Плечи", items: ["Тяга гантелей в наклоне (3х12)", "Махи в стороны (3х15)", "Тяга к поясу (3х12)"] },
+        { group: "День: Ноги с весом", items: ["Приседания с гантелями (3х15)", "Румынская тяга (3х12)", "Пресс (3х20)"] }
+      ],
+      'Турник': [
+        { group: "День: Тяга (Турник)", items: ["Подтягивания прямым хватом (3х8)", "Подтягивания обратным хватом (3х8)", "Подъем ног (3х10)"] },
+        { group: "День: Баланс", items: ["Вис на время (3 раза)", "Отжимания от пола (3х15)", "Скручивания (3х20)"] },
+        { group: "День: Сила", items: ["Австралийские подтягивания (3х12)", "Выпрыгивания (3х12)", "Планка (1 мин)"] }
+      ]
+    };
+
+    const exDb = {
+      'Отжимания': 'Корпус ровный, локти под углом 45 градусов.',
+      'Широкие отжимания': 'Акцент на грудные мышцы.',
+      'Планка': 'Тело в струну, пресс напряжен.',
+      'Обратная гиперэкстензия': 'Подъем ног лежа на животе.',
+      'Плиометрические отжимания': 'Взрывные с отрывом рук.',
+      'Лодочка': 'Одновременный подъем рук и ног.',
+      'Классические приседания': 'Пятки не отрываются от пола.',
+      'Выпады назад': 'Шаг назад, опускание таза.',
+      'Скручивания на пресс': 'Подъем только лопаток.',
+      'Жим гантелей лежа': 'Локти мягко касаются пола.',
+      'Разводка гантелей': 'Плавное разведение рук.',
+      'Прессы на бицепс': 'Супинация кисти вверху.',
+      'Тяга гантелей в наклоне': 'Спина параллельно полу.',
+      'Махи в стороны': 'Подъем рук до параллели.',
+      'Тяга к поясу': 'Сведение лопаток.',
+      'Приседания с гантелями': 'Гантели удерживаются по бокам.',
+      'Румынская тяга': 'Наклон с мягкими коленями.',
+      'Подтягивания прямым хватом': 'Мощный рывок грудью к перекладине.',
+      'Подтягивания обратным хватом': 'Акцент на бицепс.',
+      'Подъем ног': 'Контролируемый подъем.',
+      'Вис на время': 'Удержание хватом.',
+      'Австралийские подтягивания': 'Тяга груди к низкой перекладине.',
+      'Выпрыгивания': 'Взрывной прыжок вверх.'
+    };
+
+    window.onload = function() {
+      // Автоматически подтягиваем имя из Telegram, если оно есть
+      if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+        state.name = tg.initDataUnsafe.user.first_name || 'Охотник';
+      }
+
+      const saved = localStorage.getItem('slr_tg_state');
+      if (saved) {
+        state = JSON.parse(saved);
+        checkNewDay();
+        updateUI();
+        renderQuests();
+      } else {
+        if (!state.name) state.name = 'Охотник';
+        document.getElementById('onboarding').style.display = 'flex';
+      }
+    };
+
+    function saveState() {
+      localStorage.setItem('slr_tg_state', JSON.stringify(state));
+      updateUI();
+    }
+
+    function selectOpt(el, category, value) {
+      el.parentElement.querySelectorAll('.select-btn').forEach(b => b.classList.remove('selected'));
+      el.classList.add('selected');
+      tempSelections[category] = value;
+    }
+
+    function nextStep(stepNum) {
+      document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+      document.getElementById('step-' + stepNum).classList.add('active');
+    }
+
+    function finishOnboarding() {
+      state.goal = tempSelections.goal;
+      state.equip = tempSelections.equip;
+      state.lastDayIndex = 0;
+      state.lastDate = new Date().toDateString();
+      
+      document.getElementById('onboarding').style.display = 'none';
+      renderQuests();
+      saveState();
+    }
+
+    function checkNewDay() {
+      const today = new Date().toDateString();
+      if (state.lastDate !== today) {
+        state.lastDate = today;
+        state.lastDayIndex = (state.lastDayIndex + 1) % 3;
+        saveState();
+      }
+    }
+
+    function renderQuests() {
+      const list = document.getElementById('daily-checklist');
+      const userEquipPool = workoutPool[state.equip] || workoutPool['Свой вес'];
+      const currentDayPlan = userEquipPool[state.lastDayIndex || 0];
+
+      document.getElementById('day-title').innerText = currentDayPlan.group;
+
+      list.innerHTML = currentDayPlan.items.map((q) => {
+        const cleanName = q.split(' (')[0];
+        return `
+          <div class="quest-item">
+            <span class="quest-title-link" onclick="showHelp('${cleanName}')">${q}</span>
+            <div class="quest-check" onclick="completeQuest(this)">✓</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function completeQuest(el) {
+      if (el.parentElement.classList.contains('done')) return;
+      el.parentElement.classList.add('done');
+      state.exp += 35;
+      state.gold += 15;
+      if (state.exp >= 100) {
+        state.lvl++;
+        state.exp -= 100;
+        state.points += 3;
+        tg.HapticFeedback.notificationOccurred('success'); // Вибрация в телеграме при левелапе!
+        alert('🎉 СИСТЕМА: ЛЕВЕЛ АП! Уровень: ' + state.lvl);
+      } else {
+        tg.HapticFeedback.impactOccurred('medium'); // Вибрация при выполнении квеста
+      }
+      saveState();
+    }
+
+    function toggleHabit(el) {
+      if (el.parentElement.classList.contains('done')) return;
+      el.parentElement.classList.add('done');
+      state.exp += 20;
+      tg.HapticFeedback.impactOccurred('light');
+      saveState();
+    }
+
+    function updateUI() {
+      document.getElementById('app-username').innerText = state.name;
+      document.getElementById('app-avatar').innerText = state.name.charAt(0).toUpperCase();
+      document.getElementById('app-lvl').innerText = 'LVL ' + state.lvl;
+      document.getElementById('app-gold').innerText = '🪙 ' + state.gold;
+      document.getElementById('stat-points').innerText = state.points;
+      document.getElementById('str-val').innerText = state.str;
+      document.getElementById('vit-val').innerText = state.vit;
+      document.getElementById('agi-val').innerText = state.agi;
+    }
+
+    function switchTab(tabId, el) {
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.getElementById('view-' + tabId).classList.add('active');
+      el.classList.add('active');
+    }
+
+    function showHelp(exName) {
+      document.getElementById('popup-title').innerText = exName;
+      document.getElementById('popup-body').innerText = exDb[exName] || 'Контролируйте дыхание.';
+      document.getElementById('popup').style.display = 'flex';
+    }
+
+    function closePopup() {
+      document.getElementById('popup').style.display = 'none';
+    }
+
+    function addStat(type) {
+      if (state.points > 0) {
+        state.points--;
+        state[type]++;
+        tg.HapticFeedback.impactOccurred('light');
+        saveState();
+      } else {
+        alert('Недостаточно очков характеристик!');
+      }
+    }
+
+    function buyItem(cost) {
+      if (state.gold >= cost) {
+        state.gold -= cost;
+        alert('Куплено!');
+        saveState();
+      } else {
+        alert('Недостаточно монет!');
+      }
+    }
+
+    function resetAll() {
+      if (confirm('Сбросить прогресс Системы?')) {
+        localStorage.removeItem('slr_tg_state');
+        location.reload();
+      }
+    }
+  </script>
+</body>
+</html>
